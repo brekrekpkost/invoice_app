@@ -19,6 +19,7 @@ def show_menu():
     console.print("6. Log Transaction")
     console.print("7. View P&L")
     console.print("8. Configure Payment Account")
+    console.print("9. Delete Invoice")
     console.print("0. Exit")
     return Prompt.ask("\nChoice")
 
@@ -104,7 +105,7 @@ def create_invoice_ui():
     console.print("1. 2069312617 (Krepko)")
     console.print("2. 12 339 140 269 (Agajan Babayev)")
     abn_choice = Prompt.ask("Choice", choices=["1", "2"], default="1")
-    sender_abn = "2069312617" if abn_choice == "1" else "12 339 140 269"
+    sender_abn = "20693126171" if abn_choice == "1" else "12 339 140 269"
     
     # Include logo?
     include_logo = Confirm.ask("Include logo?", default=True)
@@ -231,6 +232,45 @@ def mark_paid_ui():
     new_status = "paid" if current_status == "unpaid" else "unpaid"
     db.update_invoice_status(invoice_id, new_status)
     console.print(f"[green]Invoice status updated to: {new_status}[/green]")
+
+    if new_status == "paid":
+        inv = db.get_invoice(invoice_id)
+        if inv:
+            # inv: id, customer_id, invoice_number, date, status, total, pdf_path, bank_name, bank_bsb, bank_acc
+            customer = db.get_customer(inv[1])
+            items_db = db.get_invoice_items(invoice_id)
+            line_items = [{"qty": i[0], "description": i[1], "price": i[2]} for i in items_db]
+            
+            receipt_path = os.path.join("invoices", f"Receipt_{inv[2]}.pdf")
+            
+            bank_info = {'name': inv[7], 'bsb': inv[8], 'acc': inv[9]}
+            
+            invoice_generator.generate_receipt(
+                customer, inv[2], inv[3], line_items, receipt_path,
+                include_logo=True, bank=bank_info, total_paid=inv[5]
+            )
+            console.print(f"[green]Receipt generated: {receipt_path}[/green]")
+
+def delete_invoice_ui():
+    invoices = db.get_invoices()
+    if not invoices:
+        console.print("[yellow]No invoices found[/yellow]")
+        return
+    
+    console.print("\n[bold]Invoices:[/bold]")
+    for inv in invoices:
+        console.print(f"{inv[0]}. {inv[1]} - Invoice #{inv[2]} - {inv[4]}")
+    
+    inv_input = Prompt.ask("Invoice ID to delete")
+    m = re.match(r"\s*(\d+)", inv_input or "")
+    if not m:
+        console.print("[red]Invalid invoice ID[/red]")
+        return
+    invoice_id = int(m.group(1))
+    
+    if Confirm.ask(f"Are you sure you want to delete invoice ID {invoice_id}? This cannot be undone."):
+        db.delete_invoice(invoice_id)
+        console.print("[green]Invoice deleted[/green]")
 
 def configure_bank_ui():
     console.print("\n[bold]Configure Payment Accounts[/bold]")

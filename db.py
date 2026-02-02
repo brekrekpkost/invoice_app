@@ -255,3 +255,21 @@ def set_default_payment_account(account_id):
     c.execute('UPDATE payment_accounts SET is_default = 1 WHERE id = ?', (account_id,))
     conn.commit()
     conn.close()
+
+def delete_invoice(invoice_id):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('DELETE FROM line_items WHERE invoice_id = ?', (invoice_id,))
+    c.execute('DELETE FROM invoices WHERE id = ?', (invoice_id,))
+    conn.commit()
+    conn.close()
+
+def get_invoice(invoice_id):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''SELECT i.id, i.customer_id, i.invoice_number, i.date, i.status, i.total, i.pdf_path, i.bank_name, i.bank_bsb, i.bank_acc
+                 FROM invoices i
+                 WHERE i.id = ?''', (invoice_id,))
+    inv = c.fetchone()
+    conn.close()
+    return inv

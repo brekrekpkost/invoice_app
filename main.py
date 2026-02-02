@@ -23,6 +23,8 @@ def main():
             ui.view_pl_ui()
         elif choice == "8":
             ui.configure_bank_ui()
+        elif choice == "9":
+            ui.delete_invoice_ui()
         elif choice == "0":
             print("Goodbye!")
             break
